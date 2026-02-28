@@ -1,3 +1,4 @@
+import "../polyfills.js";
 import "../config.js";
 
 import express from "express";

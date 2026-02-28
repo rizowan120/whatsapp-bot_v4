@@ -1,18 +1,3 @@
-// Polyfill browser-only DOM classes for pdfjs-dist (used by pdf-parse v2).
-// These are required on Termux/Node.js environments without canvas support.
-// Only text extraction is used, so empty stubs are safe.
-if (typeof globalThis.DOMMatrix === "undefined") {
-    globalThis.DOMMatrix = class DOMMatrix {
-        constructor() { this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0; }
-    };
-}
-if (typeof globalThis.Path2D === "undefined") {
-    globalThis.Path2D = class Path2D { };
-}
-if (typeof globalThis.ImageData === "undefined") {
-    globalThis.ImageData = class ImageData { constructor(w, h) { this.width = w; this.height = h; } };
-}
-
 import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
 import path from "path";
