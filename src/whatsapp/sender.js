@@ -134,3 +134,36 @@ export async function sendWhatsAppImage(to, imageBuffer, caption) {
     throw err;
   }
 }
+
+/**
+ * Upload audio and send it as a WhatsApp audio message.
+ * @param {string} to - Recipient phone number
+ * @param {Buffer} audioBuffer - The audio data (WAV)
+ */
+export async function sendWhatsAppAudio(to, audioBuffer) {
+  try {
+    const mediaUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${process.env.PHONE_NUMBER_ID}/media`;
+
+    const formData = new FormData();
+    const blob = new Blob([audioBuffer], { type: "audio/wav" });
+    formData.append("file", blob, "response.wav");
+    formData.append("messaging_product", "whatsapp");
+    formData.append("type", "audio/wav");
+
+    const uploadRes = await axios.post(mediaUrl, formData, {
+      headers: { ...getHeaders() }
+    });
+
+    const mediaId = uploadRes.data.id;
+
+    await axios.post(getApiUrl(), {
+      messaging_product: "whatsapp",
+      to,
+      type: "audio",
+      audio: { id: mediaId }
+    }, { headers: getHeaders() });
+  } catch (err) {
+    console.error("Failed to send WhatsApp audio:", err.response?.data || err.message);
+    throw err;
+  }
+}

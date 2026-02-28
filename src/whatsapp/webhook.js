@@ -1,7 +1,7 @@
 import { processAI } from "../ai/chatEngine.js";
 import { processImage } from "../ai/vision.js";
 import { extractText, checkFileSize } from "../ai/fileProcessor.js";
-import { sendWhatsApp, sendInteractiveList, sendTypingIndicator, sendWhatsAppImage } from "./sender.js";
+import { sendWhatsApp, sendInteractiveList, sendTypingIndicator, sendWhatsAppImage, sendWhatsAppAudio } from "./sender.js";
 import { downloadMediaAsBase64, downloadMediaAsBuffer } from "./media.js";
 import { MODELS } from "../models.js";
 import { setUserModel } from "../ai/memory.js";
@@ -9,6 +9,8 @@ import { splitMessage } from "../utils/splitter.js";
 import { formatForWhatsApp } from "../utils/formatter.js";
 import { rateLimit } from "../utils/rateLimiter.js";
 import { generateImage } from "../ai/imageGen.js";
+import { transcribeAudio } from "../ai/speechToText.js";
+import { textToSpeech } from "../ai/textToSpeech.js";
 
 export async function handleWebhook(req, res) {
 
@@ -37,9 +39,10 @@ export async function handleWebhook(req, res) {
   const image = msg.image;
   const document = msg.document;
   const interactive = msg.interactive;
+  const audio = msg.audio;
 
   // Skip if no supported content
-  if (!text && !image && !document && !interactive)
+  if (!text && !image && !document && !interactive && !audio)
     return res.sendStatus(200);
 
   res.sendStatus(200);
@@ -105,6 +108,36 @@ export async function handleWebhook(req, res) {
       } else {
         const available = Object.keys(MODELS).join(", ");
         await sendWhatsApp(user, `❌ Model "${m || ""}" not found.\nAvailable: ${available}\n\nOr type /models to select from a list.`);
+      }
+      return;
+    }
+
+    // --- Voice message processing (STT → AI → TTS) ---
+    if (audio) {
+      const audioBuffer = await downloadMediaAsBuffer(audio.id);
+      const transcript = await transcribeAudio(audioBuffer, audio.mime_type || "audio/ogg");
+
+      if (!transcript || !transcript.trim()) {
+        await sendWhatsApp(user, "⚠️ I couldn't understand the audio. Please try again.");
+        return;
+      }
+
+      // Process transcript through AI
+      let reply = await processAI(user, transcript);
+      reply = formatForWhatsApp(reply);
+
+      // Send text reply first (for readability)
+      for (const part of splitMessage(reply)) {
+        await sendWhatsApp(user, part);
+      }
+
+      // Send voice reply
+      try {
+        const voiceBuffer = await textToSpeech(reply);
+        await sendWhatsAppAudio(user, voiceBuffer);
+      } catch (ttsErr) {
+        console.error("TTS failed:", ttsErr.message);
+        // Text reply already sent, so just log the TTS failure
       }
       return;
     }
