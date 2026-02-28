@@ -1,0 +1,16 @@
+{
+  "name": "whatsapp-ai-bot",
+  "type": "module",
+  "scripts": {
+    "start": "node src/whatsapp/server.js",
+    "dev": "node --watch src/whatsapp/server.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.2",
+    "mammoth": "^1.11.0",
+    "openai": "^4.0.0",
+    "pdf-parse": "^2.4.5"
+  }
+}
